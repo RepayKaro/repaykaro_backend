@@ -12,12 +12,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
+          cache: 'npm'
 
-      - name: Deploy via SSH
+      # Optional: zip files before transfer
+      - name: Deploy via SCP to EC2
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -25,14 +27,21 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           source: "."
           target: "/var/www/html/backend"
+          strip_components: 1     # ✅ Prevents nested directory if repo root has one folder
 
-      - name: Restart backend PM2
+      - name: Restart backend with PM2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
+            echo "🔁 Backend deploy script running..."
             cd /var/www/html/backend
-            npm install
-            pm2 restart backend || pm2 start npm --name "backend" -- start
+            git config --global --add safe.directory /var/www/html/backend
+            npm ci
+            echo "✅ Build complete"
+            pm2 delete backend || true
+            pm2 start npm --name "backend" -- run start
+            pm2 save
+            echo "🚀 Backend deployed successfully"
