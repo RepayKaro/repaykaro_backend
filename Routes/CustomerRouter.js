@@ -45,7 +45,7 @@ router.get(
 );
 
 router.get(
-  "/:phone",
+  "/customer-details/:phone",
   checkPermission(ModuleNames.CUSTOMER, TaskEnum.READ),
   CustomerController.getCustomerDetails
 );
