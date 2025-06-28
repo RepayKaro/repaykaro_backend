@@ -378,8 +378,8 @@ module.exports.updateCustomerPayment = async (req, res) => {
 
 module.exports.getCustomerDetails = async (req, res) => {
   try {
-    const phone = Buffer.from(req.params.phone, "base64").toString("utf8");
-
+    // const phone = Buffer.from(req.params.phone, "base64").toString("utf8");
+const phone =req.params.phone;
     const allCustomers = await CustomerModel.find({ phone })
       .sort({ createdAt: -1 })
       .populate("verified_by", "name"); // ✅ only populate 'name'
