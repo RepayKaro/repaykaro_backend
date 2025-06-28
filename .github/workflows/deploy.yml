@@ -18,16 +18,15 @@ jobs:
           node-version: 18
           cache: 'npm'
 
-      # Optional: zip files before transfer
       - name: Deploy via SCP to EC2
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
-          source: "."
+          source: "./*"
           target: "/var/www/html/backend"
-          strip_components: 1     # ✅ Prevents nested directory if repo root has one folder
+          strip_components: 1
 
       - name: Restart backend with PM2
         uses: appleboy/ssh-action@master
@@ -38,7 +37,6 @@ jobs:
           script: |
             echo "🔁 Backend deploy script running..."
             cd /var/www/html/backend
-            git config --global --add safe.directory /var/www/html/backend
             npm ci
             echo "✅ Build complete"
             pm2 delete backend || true
