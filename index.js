@@ -9,10 +9,12 @@ const CouponRouter = require("./Routes/CouponRouter");
 const ClientRouter = require("./Routes/ClientRouter");
 const DashboardRouter = require("./Routes/DashboardRoute");
 const responseTime = require("./Middlewares/ResponseTime");
+require("./CronJob/InActiveCustomer");
 
 require("dotenv").config();
 require("./Models/db");
 const PORT = process.env.PORT || 5000;
+const ORIGIN = process.env.ENVIRONMENT == process.env.ORIGIN_LIVE ? "" : process.env.ORIGIN_LOCAL;
 
 app.get("/ping", (req, res) => {
   res.send("PONG");
@@ -21,11 +23,10 @@ app.get("/ping", (req, res) => {
 app.use(bodyParser.json());
 app.use(
   cors({
-    origin: "https://repaykaro.com",
-    // origin: "http://localhost:5173",
+    origin: ORIGIN,
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   })
 );
 
@@ -36,10 +37,9 @@ app.use((req, res, next) => {
   next();
 });
 
-
 app.use(responseTime);
 app.use("/api/v1/auth", AuthRouter);
-app.use("/api/v1/users",CheckJWT.ensureAuthenticated, AuthRouter);
+app.use("/api/v1/users", CheckJWT.ensureAuthenticated, AuthRouter);
 app.use("/api/v1/customers", CheckJWT.ensureAuthenticated, CustomerRouter);
 app.use("/api/v1/coupons", CheckJWT.ensureAuthenticated, CouponRouter);
 app.use("/api/v1/updateCoupon", CouponRouter);
@@ -60,7 +60,7 @@ app.get("/", (req, res) => {
 app.use((req, res, next) => {
   res.status(404).json({
     error: "Route not found",
-    path: req.originalUrl
+    path: req.originalUrl,
   });
 });
 

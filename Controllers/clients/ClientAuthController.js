@@ -50,6 +50,7 @@ module.exports.login = async (req, res) => {
       phone,
     });
   } catch (err) {
+    console.log("login error", err)
     return res
       .status(500)
       .json({ message: "Internal Server Error", success: false });
@@ -136,14 +137,9 @@ module.exports.getCouponDetails = async (req, res) => {
 module.exports.scratchCoupon = async (req, res) => {
   try {
     const { phone } = req.user;
-    const userId = req.user._id;
+    const customerId = req.user._id;
     const { _id } = req.body;
 
-    // const Coupon = await CouponModel.findOneAndUpdate(
-    //   { phone: phone, _id: _id },
-    //   { $set: { scratched: 1 } },
-    //   { returnDocument: "after" }
-    // );
     if (!Coupon) {
       return res.status(200).json({
         message: "Failed to update",
@@ -151,8 +147,8 @@ module.exports.scratchCoupon = async (req, res) => {
       });
     }
     await uploadTimeline(
-      userId,
-      "Scratch",
+      phone,
+      customerId,
       "Scratch",
       "Coupon Scratched",
       "Coupon Scratched Successfully."
@@ -173,6 +169,7 @@ module.exports.redeemCoupon = async (req, res) => {
   try {
     const { phone } = req.user;
     const { _id } = req.body;
+     const customerId = req.user._id;
 
     const Coupon = await CouponModel.findOneAndUpdate(
       { phone: phone, _id: _id },
@@ -186,9 +183,9 @@ module.exports.redeemCoupon = async (req, res) => {
       });
     }
     await uploadTimeline(
-      _id.toString(),
+      phone,
       "Reedem",
-      "Reedem",
+     customerId,
       "Coupon Reedemed",
       "Coupon Reedemed Successfully."
     );
@@ -207,18 +204,25 @@ module.exports.redeemCoupon = async (req, res) => {
 module.exports.uploadPaymentScreenShot = async (req, res) => {
   try {
     const files = req.files || [];
+   
     const newTask = await PaymentModel.create({
       customer_id: req.user._id,
+      phone:  req.user.phone,
       screen_shot: files[0].location,
     });
+     console.log( req.user._id)
+     console.log(newTask)
+      console.log( req.user._id)
     await uploadTimeline(
-      req.user._id.toString(),
-       "Upload",
+      req.user.phone,
+       req.user._id,
+      "Upload",
       "Payment Screenshot Uploaded",
       "Payment Screenshot Uploaded Successfully."
     );
     await uploadTimeline(
-      req.user._id.toString(),
+      req.user.phone,
+      req.user._id,
       "Pending",
       "Payment Verification Pending",
       "Payment verification is pending from Admin , you will get notification when your payment approved."
@@ -275,7 +279,8 @@ module.exports.deleteScreenshot = async (req, res) => {
       });
     }
     await uploadTimeline(
-      userId,
+      req.user.phone.toString(),
+      req.user._id.toString(),
       "Delete",
       "Payment Screenshot Deleted",
       "Payment Screenshot Deleted Successfully."
@@ -294,8 +299,9 @@ module.exports.deleteScreenshot = async (req, res) => {
 module.exports.getTimeline = async (req, res) => {
   try {
     const userId = req.user;
+    const phone = req.user.phone;
 
-    const Timeline = await CustomerTimeline.find({ customer_id: userId }).select("-__v") .sort({ createdAt: -1 });
+    const Timeline = await CustomerTimeline.find({ phone }).select("-__v").sort({ createdAt: -1 });
     return res.status(200).json({
       message: "Timeline",
       success: true,

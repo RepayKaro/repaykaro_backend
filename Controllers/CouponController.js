@@ -55,9 +55,10 @@ module.exports.createOnlyCoupon = async (req, res, next) => {
 module.exports.createCouponAndUpdatePayments = async (req, res, next) => {
   try {
     const { payment_type, customer_id } = req.body;
+    console.log("body=", req.body)
 
     let validity = process.env.DEFAULT_VALIDITY;
-    const isCustomerExist = await CustomerModel.findOne({ _id: customer_id });
+    const isCustomerExist = await CustomerModel.findOne({ _id: customer_id, isActive: true });
     if (!isCustomerExist) {
       return res
         .status(400)
@@ -72,7 +73,7 @@ module.exports.createCouponAndUpdatePayments = async (req, res, next) => {
     }
     const updatedCustomer = await CustomerModel.findOneAndUpdate(
       { _id: customer_id }, // Query condition
-      { isPaid: true, payment_type: payment_type }, // Update data
+      { isPaid: true, payment_type: payment_type, verified_by: req.user._id }, // Update data
       { new: true } // Return updated document
     );
     if (updatedCustomer) {
@@ -85,6 +86,7 @@ module.exports.createCouponAndUpdatePayments = async (req, res, next) => {
       }
       const newCoupon = new CouponModel({
         phone: updatedCustomer.phone, // Default phone if not provided
+        customer_id: customer_id,
         coupon_code: "FREE50", // Default coupon code
         amount: amount,
         validity: validity,
@@ -122,6 +124,7 @@ module.exports.createCouponAndUpdatePayments = async (req, res, next) => {
               .json({ message: "Failed to send sms", success: false });
           }
           await uploadTimeline(
+            updatedCustomer.phone,
             customer_id,
             "Update",
             "Payment Verification Approved",
@@ -177,7 +180,7 @@ module.exports.scratchCoupon = async (req, res, next) => {
         .json({ success: false, message: "Failed to update scratch" });
     }
     await uploadTimeline(
-      req.user._id.toString(),
+      req.user.phone.toString(),
       "Scratch",
       "Coupon Scrateched",
       "Coupon Scrateched Successfully."

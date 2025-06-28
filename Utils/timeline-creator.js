@@ -2,11 +2,18 @@ const CustomerTimeline = require("../Models/CustomerTimeline");
 const dotenv = require("dotenv");
 require("dotenv").config();
 
-const uploadTimeline = async (id,action, title, description) => {
+const uploadTimeline = async (
+  phone,
+  customer_id,
+  action,
+  title,
+  description
+) => {
   try {
     const newTimeline = await CustomerTimeline.create({
-      customer_id: id,
-      action:action,
+      phone: phone,
+      customer_id: customer_id,
+      action: action,
       title: title,
       description: description,
     });
@@ -17,10 +24,10 @@ const uploadTimeline = async (id,action, title, description) => {
     throw error;
   }
 };
-const deleteTimeline = async (id, title, description) => {
+const deleteTimeline = async (phone, title, description) => {
   try {
     const newTimeline = await CustomerTimeline.create({
-      customer_id: id,
+      phone: phone,
       title: title,
       description: description,
     });

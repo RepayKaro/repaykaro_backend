@@ -1,8 +1,13 @@
 const CustomerModel = require("../Models/Customer");
 const Joi = require("joi");
+const { getUserNameById, getUserNameByPhone } = require('../Utils/helper-function');
+const { Buffer } = require("buffer");
 
 const BATCH_SIZE = 5000;
 const uuid = require("uuid").v4;
+const fs = require("fs");
+const path = require("path");
+
 
 module.exports.uploadCustomers = async (req, res) => {
   const uploadId = uuid(); // unique identifier for each upload
@@ -86,46 +91,47 @@ module.exports.uploadCustomers = async (req, res) => {
       try {
         console.time(`🔍 DB Check & Insert ${uploadId}`);
 
-        // Step 5.1: Check existing phones in DB
         const phones = uniqueCustomers.map((c) => c.phone);
-        const existingPhoneSet = new Set();
 
-        for (let i = 0; i < phones.length; i += BATCH_SIZE) {
-          const chunk = phones.slice(i, i + BATCH_SIZE);
-          const existing = await CustomerModel.find(
-            { phone: { $in: chunk } },
-            { phone: 1 }
-          ).lean();
-          existing.forEach((c) => existingPhoneSet.add(c.phone));
+        const phoneToCustomerMap = new Map();
+        uniqueCustomers.forEach((c) => {
+          phoneToCustomerMap.set(c.phone, c); // overwrite in case of duplicates in Excel
+        });
+
+        const allPhones = Array.from(phoneToCustomerMap.keys());
+
+        // Step 1: Find existing records
+        const existingRecords = await CustomerModel.find(
+          { phone: { $in: allPhones }, isActive: true },
+          { phone: 1 }
+        ).lean();
+
+        const existingPhones = new Set(existingRecords.map((c) => c.phone));
+        const phonesToUpdate = Array.from(existingPhones);
+
+        // Step 2: Deactivate existing customers
+        if (phonesToUpdate.length > 0) {
+          const updateRes = await CustomerModel.updateMany(
+            { phone: { $in: phonesToUpdate }, isActive: true },
+            { $set: { isActive: false } }
+          );
+          console.log(`🛑 Deactivated ${updateRes.modifiedCount} existing customers`);
         }
+        console.log(allPhones)
 
-        // Step 5.2: Keep only new customers
-        const newCustomers = uniqueCustomers.filter(
-          (c) => !existingPhoneSet.has(c.phone)
-        );
-        console.log(
-          `📦 [${uploadId}] New customers to insert: ${newCustomers.length}`
-        );
+        // Step 3: Prepare new customer records
+        const newCustomers = allPhones.map((phone) => ({
+          ...phoneToCustomerMap.get(phone),
+          isActive: true, // ensure new ones are active
+        }));
 
-        if (!newCustomers.length) {
-          console.log(`✅ [${uploadId}] All customers already exist in DB.`);
-          console.timeEnd(`🔍 DB Check & Insert ${uploadId}`);
-          console.timeEnd(`📥 Excel Upload ${uploadId}`);
-          return;
-        }
-
-        // Step 5.3: Insert in chunks with try/catch
+        // Step 4: Insert in chunks
         let totalInserted = 0;
-
         for (let i = 0; i < newCustomers.length; i += BATCH_SIZE) {
           const chunk = newCustomers.slice(i, i + BATCH_SIZE);
           try {
-            const res = await CustomerModel.insertMany(chunk, {
-              ordered: false,
-            });
-            console.log(
-              `✅ Inserted ${res.length} in chunk #${i / BATCH_SIZE + 1}`
-            );
+            const res = await CustomerModel.insertMany(chunk, { ordered: false });
+            console.log(`✅ Inserted ${res.length} in chunk #${i / BATCH_SIZE + 1}`);
             totalInserted += res.length;
           } catch (err) {
             console.error(
@@ -140,14 +146,22 @@ module.exports.uploadCustomers = async (req, res) => {
         );
         console.timeEnd(`🔍 DB Check & Insert ${uploadId}`);
         console.timeEnd(`📥 Excel Upload ${uploadId}`);
+
+        // Delete uploaded Excel file
+        fs.unlink(req.file.path, (err) => {
+          if (err) {
+            console.error(`⚠️ Failed to delete file: ${req.file.path}`, err.message);
+          } else {
+            console.log(`🧹 Successfully deleted uploaded file: ${req.file.path}`);
+          }
+        });
+
       } catch (bgErr) {
-        console.error(
-          `❌ Background Upload Error [${uploadId}]:`,
-          bgErr.message
-        );
+        console.error(`❌ Background Upload Error [${uploadId}]:`, bgErr.message);
         console.timeEnd(`📥 Excel Upload ${uploadId}`);
       }
     });
+
   } catch (err) {
     console.error(`❌ Upload API Error [${uploadId}]:`, err.message);
     console.timeEnd(`📥 Excel Upload ${uploadId}`);
@@ -157,8 +171,6 @@ module.exports.uploadCustomers = async (req, res) => {
     });
   }
 };
-
-
 module.exports.customerList = async (req, res) => {
   try {
     const {
@@ -177,6 +189,7 @@ module.exports.customerList = async (req, res) => {
 
     // 1. Base filters
     const filterQuery = {
+      isActive: true,
       ...(filter === "0" && { isPaid: false }),
       ...(filter === "1" && { isPaid: true }),
       ...(filter === "3" && { isLogin: true }),
@@ -268,48 +281,63 @@ module.exports.customerList = async (req, res) => {
     });
 
     // 9. Run both aggregate and count in parallel
-    const [data, totalRecords] = await Promise.all([
+    const [rawData, totalRecords] = await Promise.all([
       CustomerModel.aggregate(pipeline).exec(),
 
       CustomerModel.aggregate([
         ...(searchConditions.length
           ? [{
-              $search: {
-                index: "default",
-                compound: {
-                  must: searchConditions
-                }
+            $search: {
+              index: "default",
+              compound: {
+                must: searchConditions
               }
-            }]
+            }
+          }]
           : []),
         ...(Object.keys(filterQuery).length ? [{ $match: filterQuery }] : []),
         ...(filter === "1"
           ? [
-              {
-                $lookup: {
-                  from: "payments",
-                  let: { customerId: "$_id" },
-                  pipeline: [
-                    {
-                      $match: {
-                        $expr: {
-                          $and: [
-                            { $eq: ["$customer_id", "$$customerId"] },
-                            { $eq: ["$isActive", true] }
-                          ]
-                        }
+            {
+              $lookup: {
+                from: "payments",
+                let: { customerId: "$_id" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ["$customer_id", "$$customerId"] },
+                          { $eq: ["$isActive", true] }
+                        ]
                       }
                     }
-                  ],
-                  as: "payments"
-                }
-              },
-              { $match: { "payments.0": { $exists: true } } }
-            ]
+                  }
+                ],
+                as: "payments"
+              }
+            },
+            { $match: { "payments.0": { $exists: true } } }
+          ]
           : []),
         { $count: "count" }
       ]).then(res => res[0]?.count || 0)
     ]);
+
+    // Resolve verified_by names
+    const data = await Promise.all(
+      rawData.map(async (customer) => {
+        if (customer.verified_by) {
+          try {
+            customer.verified_by = await getUserNameById(customer.verified_by);
+          } catch (err) {
+            customer.verified_by = "";
+          }
+        }
+        return customer;
+      })
+    );
+
 
     return res.status(200).json({
       success: true,
@@ -366,5 +394,31 @@ module.exports.updateCustomerPayment = async (req, res) => {
     });
   }
 };
+module.exports.getCustomerDetails = async (req, res) => {
+  try {
+    const { phone } = req.params;
+
+    // Decode from base64
+    const decoded = Buffer.from(phone.trim(), 'base64').toString('utf8');
+
+    // Validate phone format
+    const cleanPhone = decoded.replace(/\D/g, '');
+
+    // MongoDB optimized indexed search
+    const customer = await CustomerModel.findOne({ phone: cleanPhone }).lean(); // `lean()` is faster
+
+    if (!customer) {
+      return res.status(404).json({ success: false, message: "Customer not found" });
+    }
+console.log("customer",customer)
+    return res.status(200).json({ success: true, customer, message: "Customer  found" });
+  } catch (error) {
+    console.error("Fetch error:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+
+
 
 //test comment

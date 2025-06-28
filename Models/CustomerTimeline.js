@@ -3,11 +3,15 @@ const Schema = mongoose.Schema;
 
 const CustomerTimelineSchema = new Schema(
   {
-    customer_id: {
-      type: Schema.Types.ObjectId,
-      ref: "Customer",
+     customer_id: {
+        type: String,
+        required: true,
+        comment: "Customer's Id",
+    },
+    phone: {
+      type: String,
       required: true,
-      comment: "Customer's Id required",
+      comment: "Customer's phone required",
     },
     action: {
       type: String,

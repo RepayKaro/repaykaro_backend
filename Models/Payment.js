@@ -10,6 +10,11 @@ const CustomerSchema = new Schema(
       required: true,
       comment: "Customer's Id required",
     },
+    phone: {
+      type: String,
+      required: true,
+      comment: "Customer's phone",
+    },
 
     coupon_id: {
       type: Schema.Types.ObjectId,

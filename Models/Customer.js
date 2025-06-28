@@ -80,11 +80,17 @@ const CustomerSchema = new Schema(
       type: Boolean,
       default: true,
     },
-     lender_name: {
+    lender_name: {
       type: String,
       required: true,
-      default:"RepayKaro",
+      default: "RepayKaro",
       comment: "Lender name ",
+    },
+    verified_by: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+      comment: "User's Id required",
     },
   },
   { timestamps: true }

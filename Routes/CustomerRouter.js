@@ -44,6 +44,13 @@ router.get(
   CustomerController.customerList
 );
 
+router.get(
+  "/:phone",
+  checkPermission(ModuleNames.CUSTOMER, TaskEnum.READ),
+  CustomerController.getCustomerDetails
+);
+
+
 router.put(
   "/updateCustomerPayment",
   checkPermission(ModuleNames.CUSTOMER, TaskEnum.UPDATE),

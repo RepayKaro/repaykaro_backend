@@ -1,9 +1,10 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const UserModel = require("../Models/User");
+
+
 module.exports.signup = async (req, res) => {
   try {
-    //this is comment updated
     const { name, email, password } = req.body;
     const user = await UserModel.findOne({ email });
     if (user) {

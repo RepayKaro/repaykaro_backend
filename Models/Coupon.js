@@ -11,6 +11,11 @@ const CouponSchema = new Schema({
     //     required: true,
     //     comment: "Unique identifier for the customer"
     // },
+    customer_id: {
+        type: String,
+        required: true,
+        comment: "Customer's Id",
+    },
     phone: {
         type: String,
         required: true,
