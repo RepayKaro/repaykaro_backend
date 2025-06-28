@@ -427,20 +427,12 @@ module.exports.getCustomerDetails = async (req, res) => {
       })
     );
 
-    // Optional: Add performance info
-    const memoryUsage = process.memoryUsage();
-    const memory = {
-      rss: `${(memoryUsage.rss / 1024 / 1024).toFixed(2)} MB`,
-      heapTotal: `${(memoryUsage.heapTotal / 1024 / 1024).toFixed(2)} MB`,
-      heapUsed: `${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`,
-    };
+   
 
     return res.status(200).json({
       success: true,
       customer_basic_details,
       history,
-      responseTime: `${res.getHeader("X-Response-Time") || "N/A"}`,
-      memory,
     });
   } catch (err) {
     console.error("❌ Error in getCustomerDetailsByPhone:", err);
