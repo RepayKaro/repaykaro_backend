@@ -427,7 +427,11 @@ module.exports.getCustomerDetails = async (req, res) => {
       })
     );
 
-   
+   console.log("result",{
+      success: true,
+      customer_basic_details,
+      history,
+    });
 
     return res.status(200).json({
       success: true,
