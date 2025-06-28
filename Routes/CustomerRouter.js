@@ -50,6 +50,12 @@ router.get(
   CustomerController.getCustomerDetails
 );
 
+router.get(
+  "/test",
+  checkPermission(ModuleNames.CUSTOMER, TaskEnum.READ),
+  CustomerController.test
+);
+
 
 router.put(
   "/updateCustomerPayment",

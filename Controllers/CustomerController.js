@@ -379,7 +379,7 @@ module.exports.updateCustomerPayment = async (req, res) => {
 module.exports.getCustomerDetails = async (req, res) => {
   try {
     // const phone = Buffer.from(req.params.phone, "base64").toString("utf8");
-const phone =req.params.phone;
+    const phone = req.params.phone;
     const allCustomers = await CustomerModel.find({ phone })
       .sort({ createdAt: -1 })
       .populate("verified_by", "name"); // ✅ only populate 'name'
@@ -427,7 +427,7 @@ const phone =req.params.phone;
       })
     );
 
-   console.log("result",{
+    console.log("result", {
       success: true,
       customer_basic_details,
       history,
@@ -446,6 +446,13 @@ const phone =req.params.phone;
     });
   }
 };
+
+module.exports.test = async (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: "No customers found for this phone number",
+  });
+}
 
 
 
