@@ -1,4 +1,6 @@
 const CustomerModel = require("../Models/Customer");
+const CouponModel = require("../Models/Coupon");
+const PaymentModel = require("../Models/Payment");
 const Joi = require("joi");
 const { getUserNameById, getUserNameByPhone } = require('../Utils/helper-function');
 const { Buffer } = require("buffer");
@@ -187,7 +189,6 @@ module.exports.customerList = async (req, res) => {
     const limit = showAll ? null : Math.max(1, parseInt(perPage));
     const skip = showAll ? 0 : (pageNumber - 1) * limit;
 
-    // 1. Base filters
     const filterQuery = {
       isActive: true,
       ...(filter === "0" && { isPaid: false }),
@@ -196,9 +197,7 @@ module.exports.customerList = async (req, res) => {
       ...(phone && { phone })
     };
 
-    // 2. Build Atlas $search conditions
     const searchConditions = [];
-
     if (customer) {
       searchConditions.push({
         text: {
@@ -207,7 +206,6 @@ module.exports.customerList = async (req, res) => {
         }
       });
     }
-
     if (lender) {
       searchConditions.push({
         text: {
@@ -217,27 +215,23 @@ module.exports.customerList = async (req, res) => {
       });
     }
 
-    const pipeline = [];
+    const basePipeline = [];
 
-    // 3. $search Stage First (if needed)
     if (searchConditions.length) {
-      pipeline.push({
+      basePipeline.push({
         $search: {
-          index: "default", // your Atlas Search index name
-          compound: {
-            must: searchConditions
-          }
+          index: "default",
+          compound: { must: searchConditions }
         }
       });
     }
 
-    // 4. $match for other filters (phone, isPaid, isLogin)
     if (Object.keys(filterQuery).length) {
-      pipeline.push({ $match: filterQuery });
+      basePipeline.push({ $match: filterQuery });
     }
 
-    // 5. Join with payments
-    pipeline.push({
+    // Join payments
+    basePipeline.push({
       $lookup: {
         from: "payments",
         let: { customerId: "$_id" },
@@ -257,87 +251,51 @@ module.exports.customerList = async (req, res) => {
       }
     });
 
-    // 6. Match only customers with payments if filter === '1'
+    // If filter === 1, include only customers with payments
     if (filter === "1") {
-      pipeline.push({
-        $match: {
-          "payments.0": { $exists: true }
-        }
-      });
+      basePipeline.push({ $match: { "payments.0": { $exists: true } } });
     }
 
-    // 7. Pagination
-    if (!showAll) {
-      pipeline.push({ $skip: skip });
-      pipeline.push({ $limit: limit });
-    }
-
-    // 8. Clean projection
-    pipeline.push({
-      $project: {
-        otp: 0,
-        __v: 0
+    // ✅ Join user table for verified_by name
+    basePipeline.push({
+      $lookup: {
+        from: "users", // ✅ model name should match
+        localField: "verified_by",
+        foreignField: "_id",
+        as: "verified_user"
       }
     });
 
-    // 9. Run both aggregate and count in parallel
-    const [rawData, totalRecords] = await Promise.all([
-      CustomerModel.aggregate(pipeline).exec(),
+    basePipeline.push({
+      $addFields: {
+        verified_by: { $arrayElemAt: ["$verified_user.name", 0] }
+      }
+    });
+
+    // Clean unnecessary fields
+    basePipeline.push({
+      $project: {
+        otp: 0,
+        __v: 0,
+        verified_user: 0
+      }
+    });
+
+    // Pagination
+    if (!showAll) {
+      basePipeline.push({ $skip: skip });
+      basePipeline.push({ $limit: limit });
+    }
+
+    // Final query
+    const [data, totalRecords] = await Promise.all([
+      CustomerModel.aggregate(basePipeline),
 
       CustomerModel.aggregate([
-        ...(searchConditions.length
-          ? [{
-            $search: {
-              index: "default",
-              compound: {
-                must: searchConditions
-              }
-            }
-          }]
-          : []),
-        ...(Object.keys(filterQuery).length ? [{ $match: filterQuery }] : []),
-        ...(filter === "1"
-          ? [
-            {
-              $lookup: {
-                from: "payments",
-                let: { customerId: "$_id" },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $and: [
-                          { $eq: ["$customer_id", "$$customerId"] },
-                          { $eq: ["$isActive", true] }
-                        ]
-                      }
-                    }
-                  }
-                ],
-                as: "payments"
-              }
-            },
-            { $match: { "payments.0": { $exists: true } } }
-          ]
-          : []),
+        ...basePipeline.filter(stage => !["$skip", "$limit"].includes(Object.keys(stage)[0])),
         { $count: "count" }
       ]).then(res => res[0]?.count || 0)
     ]);
-
-    // Resolve verified_by names
-    const data = await Promise.all(
-      rawData.map(async (customer) => {
-        if (customer.verified_by) {
-          try {
-            customer.verified_by = await getUserNameById(customer.verified_by);
-          } catch (err) {
-            customer.verified_by = "";
-          }
-        }
-        return customer;
-      })
-    );
-
 
     return res.status(200).json({
       success: true,
@@ -394,27 +352,102 @@ module.exports.updateCustomerPayment = async (req, res) => {
     });
   }
 };
+// module.exports.getCustomerDetails = async (req, res) => {
+//   try {
+//     const { phone } = req.params;
+
+//     // Decode from base64
+//     const decoded = Buffer.from(phone.trim(), 'base64').toString('utf8');
+
+//     // Validate phone format
+//     const cleanPhone = decoded.replace(/\D/g, '');
+
+//     // MongoDB optimized indexed search
+//     const customer = await CustomerModel.findOne({ phone: cleanPhone }).lean(); // `lean()` is faster
+
+//     if (!customer) {
+//       return res.status(404).json({ success: false, message: "Customer not found" });
+//     }
+// console.log("customer",customer)
+//     return res.status(200).json({ success: true, customer, message: "Customer  found" });
+//   } catch (error) {
+//     console.error("Fetch error:", error);
+//     return res.status(500).json({ success: false, message: "Internal Server Error" });
+//   }
+// };
+
 module.exports.getCustomerDetails = async (req, res) => {
   try {
-    const { phone } = req.params;
+    const phone = Buffer.from(req.params.phone, "base64").toString("utf8");
 
-    // Decode from base64
-    const decoded = Buffer.from(phone.trim(), 'base64').toString('utf8');
+    const allCustomers = await CustomerModel.find({ phone })
+      .sort({ createdAt: -1 })
+      .populate("verified_by", "name"); // ✅ only populate 'name'
 
-    // Validate phone format
-    const cleanPhone = decoded.replace(/\D/g, '');
-
-    // MongoDB optimized indexed search
-    const customer = await CustomerModel.findOne({ phone: cleanPhone }).lean(); // `lean()` is faster
-
-    if (!customer) {
-      return res.status(404).json({ success: false, message: "Customer not found" });
+    if (!allCustomers || allCustomers.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No customers found for this phone number",
+      });
     }
-console.log("customer",customer)
-    return res.status(200).json({ success: true, customer, message: "Customer  found" });
-  } catch (error) {
-    console.error("Fetch error:", error);
-    return res.status(500).json({ success: false, message: "Internal Server Error" });
+
+    // Use most recent customer as basic
+    const recentCustomer = allCustomers[0];
+
+    const customer_basic_details = {
+      _id: recentCustomer._id,
+      customer: recentCustomer.customer,
+      phone: recentCustomer.phone,
+      createdAt: recentCustomer.createdAt,
+      updatedAt: recentCustomer.updatedAt,
+    };
+
+    const history = await Promise.all(
+      allCustomers.map(async (cust) => {
+        const coupon = await CouponModel.findOne({
+          customer_id: cust._id.toString(),
+          phone,
+        }).sort({ createdAt: -1 });
+
+        const screenshots = await PaymentModel.findOne({
+          customer_id: cust._id,
+          phone,
+        }).sort({ createdAt: -1 });
+
+        const customerData = {
+          ...cust.toObject(),
+          verified_by: cust.verified_by?.name || null, // ✅ replace ObjectId with name
+        };
+
+        return {
+          customer: customerData,
+          coupon: coupon || null,
+          screenshots: screenshots || null,
+        };
+      })
+    );
+
+    // Optional: Add performance info
+    const memoryUsage = process.memoryUsage();
+    const memory = {
+      rss: `${(memoryUsage.rss / 1024 / 1024).toFixed(2)} MB`,
+      heapTotal: `${(memoryUsage.heapTotal / 1024 / 1024).toFixed(2)} MB`,
+      heapUsed: `${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`,
+    };
+
+    return res.status(200).json({
+      success: true,
+      customer_basic_details,
+      history,
+      responseTime: `${res.getHeader("X-Response-Time") || "N/A"}`,
+      memory,
+    });
+  } catch (err) {
+    console.error("❌ Error in getCustomerDetailsByPhone:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
 };
 

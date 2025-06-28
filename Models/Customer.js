@@ -8,7 +8,6 @@ const CustomerSchema = new Schema(
       required: true,
       comment: "Customer's full name",
     },
-
     phone: {
       type: String,
       required: true,
@@ -20,7 +19,7 @@ const CustomerSchema = new Schema(
       comment: "Foreclosure status (e.g., pending, completed)",
     },
     settlement: {
-      type: mongoose.Types.Decimal128, // Supports decimal values like 121.343
+      type: mongoose.Types.Decimal128,
       default: 0.0,
       comment: "Total settlement amount",
     },
@@ -46,35 +45,29 @@ const CustomerSchema = new Schema(
     },
     payment_type: {
       type: Number,
-      enum: [0, 1, 2, 3], // Allowed values
-      default: 0, // 0 means no payment made
-      comment:
-        "Payment type: 0 - No Payment, 1 - Foreclosure, 2 - Settlement, 3 - Part Payment",
+      enum: [0, 1, 2, 3],
+      default: 0,
+      comment: "0 - No Payment, 1 - Foreclosure, 2 - Settlement, 3 - Part Payment",
     },
     isPaid: {
       type: Boolean,
       default: false,
-      comment: "Indicates if the customer has completed the payment",
     },
     payment_url: {
       type: String,
       default: null,
-      comment: "URL for online payment (if applicable)",
     },
     isLogin: {
       type: Boolean,
       default: false,
-      comment: "Tracks if the customer has logged into the platform",
     },
     last_login: {
       type: Date,
       default: null,
-      comment: "Records the last login time of the customer",
     },
     otp: {
       type: Number,
-      default: false,
-      required: false,
+      default: null,
     },
     isActive: {
       type: Boolean,
@@ -84,13 +77,10 @@ const CustomerSchema = new Schema(
       type: String,
       required: true,
       default: "RepayKaro",
-      comment: "Lender name ",
     },
     verified_by: {
       type: Schema.Types.ObjectId,
-      ref: "User",
-      required: false,
-      comment: "User's Id required",
+      ref: "users", // ✅ This should match the **model name** used in `mongoose.model("users", UserSchema)`
     },
   },
   { timestamps: true }

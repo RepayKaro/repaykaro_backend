@@ -1,16 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-// const { v4: uuidv4 } = require('uuid');
 
-const CouponSchema = new Schema({
-
-    // reference_no: {
-    //     type: String,
-    //     default: uuidv4, // Generates a unique UUID for each customer
-    //     unique: true, // Ensures uniqueness in the database
-    //     required: true,
-    //     comment: "Unique identifier for the customer"
-    // },
+const CouponSchema = new Schema({  
     customer_id: {
         type: String,
         required: true,

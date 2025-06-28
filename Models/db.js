@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const mongo_url = process.env.ENVIRONMENT == "production" ? process.env.MONGO_CONN : process.env.MONGO_CONN_LOCAL;
-
+console.log("mongo_url",mongo_url)
 
 if (!mongo_url) {
   console.error("❌ MONGO_URI is not defined in the .env file");
