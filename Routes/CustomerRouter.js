@@ -51,7 +51,7 @@ router.get(
 );
 
 router.get(
-  "/test",
+  "/testt",
   checkPermission(ModuleNames.CUSTOMER, TaskEnum.READ),
   CustomerController.test
 );
