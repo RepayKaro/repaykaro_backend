@@ -1,4 +1,4 @@
-const CustomerModel = require("../Models/CustomerModel");
+const CustomerModel = require("../Models/Customer");
 
 async function deActivateAllCustomers() {
     console.log("[Cron] Running monthly deactivation...");
