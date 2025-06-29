@@ -85,6 +85,12 @@ const CustomerSchema = new Schema(
   },
   { timestamps: true }
 );
+// ✅ Add indexes here
+CustomerSchema.index({ phone: 1 });
+CustomerSchema.index({ lender_name: 1 });
+CustomerSchema.index({ verified_by: 1 });
+CustomerSchema.index({ payment_type: 1 });
+CustomerSchema.index({ customer: 1 }); // for text-based name search
 
 const CustomerModel = mongoose.model("customers", CustomerSchema);
 module.exports = CustomerModel;

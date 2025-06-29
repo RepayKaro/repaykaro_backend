@@ -352,30 +352,6 @@ module.exports.updateCustomerPayment = async (req, res) => {
     });
   }
 };
-// module.exports.getCustomerDetails = async (req, res) => {
-//   try {
-//     const { phone } = req.params;
-
-//     // Decode from base64
-//     const decoded = Buffer.from(phone.trim(), 'base64').toString('utf8');
-
-//     // Validate phone format
-//     const cleanPhone = decoded.replace(/\D/g, '');
-
-//     // MongoDB optimized indexed search
-//     const customer = await CustomerModel.findOne({ phone: cleanPhone }).lean(); // `lean()` is faster
-
-//     if (!customer) {
-//       return res.status(404).json({ success: false, message: "Customer not found" });
-//     }
-// console.log("customer",customer)
-//     return res.status(200).json({ success: true, customer, message: "Customer  found" });
-//   } catch (error) {
-//     console.error("Fetch error:", error);
-//     return res.status(500).json({ success: false, message: "Internal Server Error" });
-//   }
-// };
-
 module.exports.getCustomerDetails = async (req, res) => {
   try {
     // const phone = Buffer.from(req.params.phone, "base64").toString("utf8");
@@ -427,12 +403,6 @@ module.exports.getCustomerDetails = async (req, res) => {
       })
     );
 
-    console.log("result", {
-      success: true,
-      customer_basic_details,
-      history,
-    });
-
     return res.status(200).json({
       success: true,
       customer_basic_details,
@@ -446,15 +416,4 @@ module.exports.getCustomerDetails = async (req, res) => {
     });
   }
 };
-
-module.exports.test = async (req, res) => {
-  return res.status(200).json({
-    success: true,
-    message: "No customers found for this phone number",
-  });
-}
-
-
-
-
 //test comment

@@ -50,11 +50,7 @@ router.get(
   CustomerController.getCustomerDetails
 );
 
-router.get(
-  "/testt",
-  checkPermission(ModuleNames.CUSTOMER, TaskEnum.READ),
-  CustomerController.test
-);
+
 
 
 router.put(

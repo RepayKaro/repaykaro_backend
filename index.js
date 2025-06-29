@@ -68,5 +68,3 @@ app.listen(PORT, () => {
   console.log(`Server is running on ${PORT}`);
 });
 
-
-// Rupam Singh another gaurav
