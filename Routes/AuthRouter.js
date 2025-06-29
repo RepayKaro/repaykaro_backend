@@ -6,7 +6,7 @@ const AuthController = require("../Controllers/AuthController");
 const UserController = require("../Controllers/UserController");
 const AuthValidation = require("../Middlewares/AuthValidation");
 
-router.post("/login1", AuthValidation.loginValidation, AuthController.login1);
+router.post("/login", AuthValidation.loginValidation, AuthController.login);
 router.post(
   "/create",
   checkPermission(ModuleNames.USER, TaskEnum.CREATE),
