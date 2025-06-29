@@ -9,7 +9,7 @@ const CouponRouter = require("./Routes/CouponRouter");
 const ClientRouter = require("./Routes/ClientRouter");
 const DashboardRouter = require("./Routes/DashboardRoute");
 const responseTime = require("./Middlewares/ResponseTime");
-require("./CronJob/InActiveCustomer");
+
 
 require("dotenv").config();
 require("./Models/db");
