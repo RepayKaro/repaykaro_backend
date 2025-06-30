@@ -117,12 +117,15 @@ module.exports.createCouponAndUpdatePayments = async (req, res, next) => {
             variables_values: `${updatedCustomer.customer}|${updatedCoupon.coupon_code}|`,
             numbers: updatedCustomer.phone,
           };
+          if (process.env.ENVIRONMENT !== "production") {
 
-          const sendLink = await sendSms("send-coupon-link", Apidata);
-          if (!sendLink) {
-            return res
-              .status(400)
-              .json({ message: "Failed to send sms", success: false });
+            // const sendLink = await sendSms("send-coupon-link", Apidata);
+            // if (!sendLink) {
+            //   return res
+            //     .status(400)
+            //     .json({ message: "Failed to send sms", success: false });
+            // }
+
           }
           await uploadTimeline(
             updatedCustomer.phone,
@@ -274,11 +277,11 @@ module.exports.createDynamicURL = async (req, res, next) => {
 
   // Step 4: Prepare the Final URL
   const requestURL = `https://repaykaro.com/UpdateCoupon?Data=${encodeURIComponent(encryptedString)}`;
-  const data={
-    "checksum":checksum,
-    "encryptedString":encryptedString,
-    "requestURL":requestURL,
-    "dataString":dataString
+  const data = {
+    "checksum": checksum,
+    "encryptedString": encryptedString,
+    "requestURL": requestURL,
+    "dataString": dataString
 
   }
   return res
@@ -363,7 +366,7 @@ function encryptData(data, encryptionKey, encryptionIV) {
 
 async function generateDynamicURL2(
   uniqueReferenceNo,
-  coupon_code 
+  coupon_code
 ) {
   // Keys and IV
   const saltKey = "Rckd39KVomIlPaXhJTZpoYbJOq6kT9YaqNloWq";
