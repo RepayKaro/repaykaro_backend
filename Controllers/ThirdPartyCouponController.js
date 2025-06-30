@@ -5,6 +5,7 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 const CouponModel = require("../Models/Coupon");
 const CouponEncryptionModel = require("../Models/CouponEncryption");
+const { uploadTimeline } = require("../Utils/timeline-creator");
 
 // Load environment variables
 const encryptionKey =
@@ -41,7 +42,6 @@ const updateRealtimeCouponByThirdParty = async (req, res) => {
 
     const encryptedCode = new CouponEncryptionModel({
       encrypted_code: encryptedData, // Default phone if not provided
-
     });
     const savedEncryptedCode = await encryptedCode.save();
     if (savedEncryptedCode) {
@@ -119,9 +119,26 @@ const updateRealtimeCouponByThirdParty = async (req, res) => {
       { scratched: 1, redeemed: 1 }, // Update data
       { new: true } // Return updated document
     );
-    if(!updatedCustomer){
-      console.log("No customer found with the given uniqueReferenceNo:", uniqueReferenceNo);
+    if (!updatedCustomer) {
+      console.log(
+        "No customer found with the given uniqueReferenceNo:",
+        uniqueReferenceNo
+      );
     }
+    const isCouponExist = await CouponModel.findOne({ _id: uniqueReferenceNo });
+    if (!isCouponExist) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Coupon not found" });
+    }
+
+    await uploadTimeline(
+      isCouponExist.phone,
+      isCouponExist.customer_id,
+      "Update",
+      "Coupon Redeemed",
+      "Congratulation Your Coupon Redeemed successfully"
+    );
     // Return Valid Response
     return res
       .status(200)
