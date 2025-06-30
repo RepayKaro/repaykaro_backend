@@ -38,6 +38,7 @@ app.use((req, res, next) => {
 const updateRealtimeCouponByThirdParty = async (req, res) => {
   try {
     const encryptedData = req.query.Data;
+    console.log("Received encrypted data:", encryptedData);
 
     // const encryptedCode = new CouponEncryptionModel({
     //   encrypted_code: encryptedData, // Default phone if not provided
