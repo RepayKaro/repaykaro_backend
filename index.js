@@ -47,7 +47,10 @@ app.use("/api/v1/clientAuth", ClientRouter);
 app.use("/api/v1/clients", CheckJWT.ensureAuthenticated, ClientRouter);
 app.use("/api/v1/profile", CheckJWT.ensureAuthenticated, AuthRouter);
 app.use("/api/v1/dashboard", CheckJWT.ensureAuthenticated, DashboardRouter);
+
+// dont delete this
 // Root route: show welcome message or API status
+app.use("/api/v1/generateDynamicUrl", CouponRouter);
 app.get("/", (req, res) => {
   res.status(200).json({
     message: "Welcome to the API server!",

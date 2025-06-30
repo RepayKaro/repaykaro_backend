@@ -17,7 +17,7 @@ router.post(
 
 router.post(
   "/create-coupon-update-payment",
-    checkPermission(ModuleNames.COUPON, TaskEnum.UPDATE),
+  checkPermission(ModuleNames.COUPON, TaskEnum.UPDATE),
 
   CouponValidator.validateCreateCouponAndUpdatePayment,
   CouponController.createCouponAndUpdatePayments
@@ -25,7 +25,7 @@ router.post(
 
 router.post(
   "/coupon-scratch",
-    // checkPermission(ModuleNames.COUPON, TaskEnum.UPDATE),
+  // checkPermission(ModuleNames.COUPON, TaskEnum.UPDATE),
 
   CouponValidator.validateCouponScratch,
   CouponController.scratchCoupon
@@ -33,7 +33,7 @@ router.post(
 
 router.get(
   "/get-all-coupon/:phone",
-    checkPermission(ModuleNames.COUPON, TaskEnum.READ),
+  checkPermission(ModuleNames.COUPON, TaskEnum.READ),
 
   CouponValidator.validateGetAllCoupon,
   CouponController.getAllCoupon
@@ -41,12 +41,17 @@ router.get(
 
 router.get(
   "/get-coupon-count/:phone",
-    checkPermission(ModuleNames.COUPON, TaskEnum.READ),
+  checkPermission(ModuleNames.COUPON, TaskEnum.READ),
 
   CouponValidator.validateGetAllCoupon,
   CouponController.getCouponCount
 );
-
 router.get("/", ThirdPartyCouponController.updateRealtimeCouponByThirdParty);
+
+// this is testing url for genearting dynamic url for third party
+router.post(
+  "/createDynamicURL",
+  CouponController.createDynamicURL
+);
 
 module.exports = router;

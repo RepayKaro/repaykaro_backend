@@ -98,7 +98,7 @@ module.exports.createCouponAndUpdatePayments = async (req, res, next) => {
           savedCoupon.amount,
           validity
         );
-        console.log("response",response)
+        console.log("response", response)
         if (response.statuscode == 0) {
           const reference_no = savedCoupon._id;
           const coupon = response.VoucherNo;
@@ -252,6 +252,41 @@ module.exports.getCouponCount = async (req, res, next) => {
   }
 };
 
+module.exports.createDynamicURL = async (req, res, next) => {
+  const { coupon_id, coupon_code } = req.body;
+
+  const uniqueReferenceNo = coupon_id;
+  const couponVoucher = coupon_code;
+  // Keys and IV
+  const saltKey = "Rckd39KVomIlPaXhJTZpoYbJOq6kT9YaqNloWq";
+  const encryptionKey = "743b1cf3fb4EEgWG4UJZONDprHa24125";
+  const encryptionIV = "ABCDEFGHIJKLMNOP"; // Must be 16 bytes long
+
+
+  // Step 1: Generate Checksum
+  const checksum = generateChecksum2(uniqueReferenceNo, couponVoucher, saltKey);
+
+  // Step 2: Prepare Data String with Checksum
+  const dataString = `${uniqueReferenceNo}|${couponVoucher}|${checksum}`;
+
+  // Step 3: Encrypt the Data
+  const encryptedString = encryptData(dataString, encryptionKey, encryptionIV);
+
+  // Step 4: Prepare the Final URL
+  const requestURL = `https://repaykaro.com/UpdateCoupon?Data=${encodeURIComponent(encryptedString)}`;
+  const data={
+    "checksum":checksum,
+    "encryptedString":encryptedString,
+    "requestURL":requestURL,
+    "dataString":dataString
+
+  }
+  return res
+    .status(200)
+    .json({ success: true, data, message: "done" });
+
+}
+
 async function generateDynamicURL(
   uniqueReferenceNo,
   cashBackAmount,
@@ -324,4 +359,46 @@ function encryptData(data, encryptionKey, encryptionIV) {
   let encrypted = cipher.update(data, "utf8", "base64");
   encrypted += cipher.final("base64");
   return encrypted;
+}
+
+async function generateDynamicURL2(
+  uniqueReferenceNo,
+  coupon_code 
+) {
+  // Keys and IV
+  const saltKey = "Rckd39KVomIlPaXhJTZpoYbJOq6kT9YaqNloWq";
+  const encryptionKey = "743b1cf3fb4EEgWG4UJZONDprHa24125";
+  const encryptionIV = "ABCDEFGHIJKLMNOP"; // Must be 16 bytes long
+
+  // Step 1: Generate Checksum
+  const checksum = generateChecksum2(
+    uniqueReferenceNo,
+    coupon_code,
+    saltKey
+  );
+
+  // Step 2: Prepare Data String with Checksum
+  const dataString = `${uniqueReferenceNo}|${coupon_code}|${checksum}`;
+
+  // Step 3: Encrypt the Data
+  const encryptedString = encryptData(dataString, encryptionKey, encryptionIV);
+
+  // URL-safe base64 encoding
+  const replacedEncryptedOutput = encryptedString
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+
+  // Step 4: Prepare the Final URL
+  return requestURL = `https://repaykaro.com/UpdateCoupon?Data=${encodeURIComponent(
+    replacedEncryptedOutput
+  )}`;
+}
+function generateChecksum2(
+  uniqueReferenceNo,
+  coupon_code,
+  saltKey
+) {
+  const data = `${uniqueReferenceNo}|${coupon_code}|${saltKey}`;
+  return crypto.createHash("sha512").update(data).digest("hex");
 }

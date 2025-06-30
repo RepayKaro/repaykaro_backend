@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const rateLimit = require("express-rate-limit");
 const app = express();
 const CouponModel = require("../Models/Coupon");
-const CustomerModel = require("../Models/Customer");
+const CouponEncryptionModel = require("../Models/CouponEncryption");
 
 // Load environment variables
 const encryptionKey =
@@ -38,6 +38,16 @@ app.use((req, res, next) => {
 const updateRealtimeCouponByThirdParty = async (req, res) => {
   try {
     const encryptedData = req.query.Data;
+
+
+    const encryptedCode = new CouponEncryptionModel({
+      encrypted_code: encryptedData, // Default phone if not provided
+
+    });
+    const savedEncryptedCode = await encryptedCode.save();
+    if (savedEncryptedCode) {
+      console.log("Encrypted code saved successfully:", savedEncryptedCode);
+    }
     if (!encryptedData) {
       return res
         .status(400)
@@ -46,6 +56,7 @@ const updateRealtimeCouponByThirdParty = async (req, res) => {
 
     // Convert URL-safe Base64 to standard Base64
     let decodedData = encryptedData.replace(/-/g, "+").replace(/_/g, "/");
+    console.log("Received encrypted data:", decodedData);
 
     // Add padding if necessary
     while (decodedData.length % 4 !== 0) {
