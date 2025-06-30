@@ -39,7 +39,8 @@ module.exports.uploadCustomers = async (req, res) => {
     const formatNumber = (value) => parseFloat(value || 0).toFixed(2);
     const formatNumber1 = (value) => {
       if (!value) return 0;
-      return Math.floor(Number(value)); // rounds down like 10.99 -> 10
+      const floatedValue = parseFloat(value || 0).toFixed(2)
+      return Math.floor(Number(floatedValue)); // rounds down like 10.99 -> 10
     };
     const normalizePhone = (phone) =>
       String(phone || "")
