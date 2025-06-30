@@ -38,16 +38,15 @@ app.use((req, res, next) => {
 const updateRealtimeCouponByThirdParty = async (req, res) => {
   try {
     const encryptedData = req.query.Data;
-    console.log("Received encrypted data:", encryptedData);
 
-    // const encryptedCode = new CouponEncryptionModel({
-    //   encrypted_code: encryptedData, // Default phone if not provided
+    const encryptedCode = new CouponEncryptionModel({
+      encrypted_code: encryptedData, // Default phone if not provided
 
-    // });
-    // const savedEncryptedCode = await encryptedCode.save();
-    // if (savedEncryptedCode) {
-    //   console.log("Encrypted code saved successfully:", savedEncryptedCode);
-    // }
+    });
+    const savedEncryptedCode = await encryptedCode.save();
+    if (savedEncryptedCode) {
+      console.log("Encrypted code saved successfully:", savedEncryptedCode);
+    }
     if (!encryptedData) {
       return res
         .status(400)
@@ -76,7 +75,7 @@ const updateRealtimeCouponByThirdParty = async (req, res) => {
         statusCode: 400,
       });
     }
-    console.log("Decrypted string:", decryptedString);
+
     // Extract Fields
     const dataParts = decryptedString.split("|");
     if (dataParts.length !== 3) {
@@ -86,7 +85,7 @@ const updateRealtimeCouponByThirdParty = async (req, res) => {
         statusCode: 400,
       });
     }
-    console.log("Extracted data parts:", dataParts);
+
     const [uniqueReferenceNo, couponVoucher, receivedChecksum] = dataParts;
 
     // Validate Extracted Data
@@ -107,8 +106,6 @@ const updateRealtimeCouponByThirdParty = async (req, res) => {
       couponVoucher,
       saltKey
     );
-    console.log("Calculated checksum:", calculatedChecksum);
-    console.log("Received checksum:", receivedChecksum);
     if (!secureCompare(calculatedChecksum, receivedChecksum)) {
       return res.status(403).json({
         status: "error",
@@ -122,6 +119,9 @@ const updateRealtimeCouponByThirdParty = async (req, res) => {
       { scratched: 1, redeemed: 1 }, // Update data
       { new: true } // Return updated document
     );
+    if(!updatedCustomer){
+      console.log("No customer found with the given uniqueReferenceNo:", uniqueReferenceNo);
+    }
     // Return Valid Response
     return res
       .status(200)
