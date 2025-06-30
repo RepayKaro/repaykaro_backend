@@ -136,8 +136,8 @@ const updateRealtimeCouponByThirdParty = async (req, res) => {
       isCouponExist.phone,
       isCouponExist.customer_id,
       "Update",
-      `Coupon Redeemed (${isCouponExist.coupon_code})`,
-      "Congratulation Your Coupon Redeemed successfully"
+      `Coupon Redeemed`,    
+       `Congratulation Your Coupon Redeemed successfully (${isCouponExist.coupon_code})`
     );
     // Return Valid Response
     return res

@@ -150,9 +150,8 @@ module.exports.scratchCoupon = async (req, res) => {
       phone,
       customerId,
       "Scratch",
-      "Coupon Scratched",
-      `Coupon Redeemed (${Coupon.coupon_code})`,
-      "Coupon Scratched Successfully."
+      "Coupon Scratched", 
+      `Coupon Scratched Successfully (${Coupon.coupon_code})`
     );
     return res.status(200).json({
       message: "Coupon Updated",
@@ -185,9 +184,9 @@ module.exports.redeemCoupon = async (req, res) => {
     }
     await uploadTimeline(
       phone,
-      customerId,
+      customerId,      
+      "Coupon Reedemed",
       `Coupon Reedemed (${Coupon.coupon_code})`,
-      "Coupon Reedemed Successfully."
     );
     return res.status(200).json({
       message: "Coupon Updated",
