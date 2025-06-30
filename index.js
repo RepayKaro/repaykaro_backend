@@ -61,7 +61,7 @@ app.get("/", (req, res) => {
 
 // 404 handler for all unmatched routes
 app.use((req, res, next) => {
-  console.log("api not found", req.originalUrl);
+  console.log("api not found", req);
   res.status(404).json({
     error: "Route not found",
     path: req.originalUrl,
