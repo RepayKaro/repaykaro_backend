@@ -185,9 +185,10 @@ module.exports.scratchCoupon = async (req, res, next) => {
     }
     await uploadTimeline(
       req.user.phone.toString(),
+      isCouponExist.customer_id,
       "Scratch",     
-      `Coupon Scrateched`,
-      `Coupon Scrateched Successfully (${isCouponExist.coupon_code})`
+      `Coupon Scrateched (${isCouponExist.coupon_code})`,
+      `Coupon Scrateched Successfully `
     );
 
     // Further logic here (e.g., marking the coupon as scratched)
