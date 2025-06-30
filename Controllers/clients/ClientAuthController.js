@@ -14,7 +14,7 @@ module.exports.login = async (req, res) => {
     const { phone } = req.body;
     let otp = Math.floor(1000 + Math.random() * 9000).toString();
 
-    if (process.env.ENVIRONMENT !== "production"|| phone === "8538945025") {
+    if (process.env.ENVIRONMENT !== "production" || phone === "8538945025") {
       otp = "1234";
     }
 
@@ -139,18 +139,19 @@ module.exports.scratchCoupon = async (req, res) => {
     const { phone } = req.user;
     const customerId = req.user._id;
     const { _id } = req.body;
-
+    const Coupon = await CouponModel.findOne({ _id: _id, phone: phone });
     if (!Coupon) {
-      return res.status(200).json({
-        message: "Failed to update",
-        success: true,
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Coupon not found" });
     }
+
     await uploadTimeline(
       phone,
       customerId,
       "Scratch",
       "Coupon Scratched",
+      `Coupon Redeemed (${Coupon.coupon_code})`,
       "Coupon Scratched Successfully."
     );
     return res.status(200).json({
@@ -169,7 +170,7 @@ module.exports.redeemCoupon = async (req, res) => {
   try {
     const { phone } = req.user;
     const { _id } = req.body;
-     const customerId = req.user._id;
+    const customerId = req.user._id;
 
     const Coupon = await CouponModel.findOneAndUpdate(
       { phone: phone, _id: _id },
@@ -184,9 +185,8 @@ module.exports.redeemCoupon = async (req, res) => {
     }
     await uploadTimeline(
       phone,
-      "Reedem",
-     customerId,
-      "Coupon Reedemed",
+      customerId,
+      `Coupon Reedemed (${Coupon.coupon_code})`,
       "Coupon Reedemed Successfully."
     );
     return res.status(200).json({
@@ -204,18 +204,16 @@ module.exports.redeemCoupon = async (req, res) => {
 module.exports.uploadPaymentScreenShot = async (req, res) => {
   try {
     const files = req.files || [];
-   
+
     const newTask = await PaymentModel.create({
       customer_id: req.user._id,
-      phone:  req.user.phone,
+      phone: req.user.phone,
       screen_shot: files[0].location,
     });
-     console.log( req.user._id)
-     console.log(newTask)
-      console.log( req.user._id)
+
     await uploadTimeline(
       req.user.phone,
-       req.user._id,
+      req.user._id,
       "Upload",
       "Payment Screenshot Uploaded",
       "Payment Screenshot Uploaded Successfully."
