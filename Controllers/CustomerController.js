@@ -421,4 +421,22 @@ module.exports.getCustomerDetails = async (req, res) => {
     });
   }
 };
+module.exports.testt = async (req, res) => {
+  try {
+    console.log("Test endpoint hit");
+
+
+
+    return res.status(200).json({
+      success: true,
+      message:"Test endpoint successful",
+    });
+  } catch (err) {
+    console.error("❌ Error in getCustomerDetailsByPhone:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
 //test comment

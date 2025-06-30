@@ -60,4 +60,11 @@ router.put(
   CustomerController.updateCustomerPayment
 );
 
+
+router.get(
+  "/testt",
+  
+  CustomerController.testt
+);
+
 module.exports = router;
