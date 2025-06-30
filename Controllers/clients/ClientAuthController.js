@@ -171,27 +171,27 @@ module.exports.redeemCoupon = async (req, res) => {
     const { _id } = req.body;
     const customerId = req.user._id;
 
-    const Coupon = await CouponModel.findOneAndUpdate(
-      { phone: phone, _id: _id },
-      { $set: { scratched: 1 } },
-      { returnDocument: "after" }
-    );
-    if (!Coupon) {
-      return res.status(200).json({
-        message: "Failed to update",
-        success: true,
-      });
-    }
-    await uploadTimeline(
-      phone,
-      customerId,      
-      "Coupon Reedemed",
-      `Coupon Reedemed (${Coupon.coupon_code})`,
-    );
+    // const Coupon = await CouponModel.findOneAndUpdate(
+    //   { phone: phone, _id: _id },
+    //   { $set: { scratched: 1 } },
+    //   { returnDocument: "after" }
+    // );
+    // if (!Coupon) {
+    //   return res.status(200).json({
+    //     message: "Failed to update",
+    //     success: true,
+    //   });
+    // }
+    // await uploadTimeline(
+    //   phone,
+    //   customerId,      
+    //   "Coupon Reedemed",
+    //   `Coupon Reedemed (${Coupon.coupon_code})`,
+    // );
     return res.status(200).json({
       message: "Coupon Updated",
       success: true,
-      coupon: Coupon,
+     
     });
   } catch (err) {
     return res.status(500).json({
