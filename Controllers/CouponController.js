@@ -98,6 +98,7 @@ module.exports.createCouponAndUpdatePayments = async (req, res, next) => {
           savedCoupon.amount,
           validity
         );
+        console.log("response",response)
         if (response.statuscode == 0) {
           const reference_no = savedCoupon._id;
           const coupon = response.VoucherNo;

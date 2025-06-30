@@ -37,6 +37,10 @@ module.exports.uploadCustomers = async (req, res) => {
 
     // === Step 1: Clean and Normalize ===
     const formatNumber = (value) => parseFloat(value || 0).toFixed(2);
+    const formatNumber1 = (value) => {
+      if (!value) return 0;
+      return Math.floor(Number(value)); // rounds down like 10.99 -> 10
+    };
     const normalizePhone = (phone) =>
       String(phone || "")
         .replace(/\s+/g, "")
@@ -49,12 +53,12 @@ module.exports.uploadCustomers = async (req, res) => {
       }
       return {
         ...cleanedRow,
-        foreclosure_reward: formatNumber(cleanedRow.foreclosure_reward),
         fore_closure: formatNumber(cleanedRow.fore_closure),
         settlement: formatNumber(cleanedRow.settlement),
         minimum_part_payment: formatNumber(cleanedRow.minimum_part_payment),
-        settlement_reward: formatNumber(cleanedRow.settlement_reward),
-        minimum_part_payment_reward: formatNumber(
+        foreclosure_reward: formatNumber1(cleanedRow.foreclosure_reward),
+        settlement_reward: formatNumber1(cleanedRow.settlement_reward),
+        minimum_part_payment_reward: formatNumber1(
           cleanedRow.minimum_part_payment_reward
         ),
         phone: normalizePhone(cleanedRow.phone),

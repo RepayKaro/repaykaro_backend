@@ -42,7 +42,7 @@ app.use("/api/v1/auth", AuthRouter);
 app.use("/api/v1/users", CheckJWT.ensureAuthenticated, AuthRouter);
 app.use("/api/v1/customers", CheckJWT.ensureAuthenticated, CustomerRouter);
 app.use("/api/v1/coupons", CheckJWT.ensureAuthenticated, CouponRouter);
-app.use("/api/v1/updateCoupon", CouponRouter);
+app.use("/api/v1/UpdateCoupon", CouponRouter);
 app.use("/api/v1/clientAuth", ClientRouter);
 app.use("/api/v1/clients", CheckJWT.ensureAuthenticated, ClientRouter);
 app.use("/api/v1/profile", CheckJWT.ensureAuthenticated, AuthRouter);
