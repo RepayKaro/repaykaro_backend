@@ -210,7 +210,7 @@ module.exports.getAllCoupon = async (req, res, next) => {
         .status(400)
         .json({ success: false, message: "Phone not exist" });
     }
-    const coupon = await CouponModel.find({ phone });
+    const coupon = await CouponModel.find({ phone }).sort({ updatedAt: -1 });
     const totalRecords = await CouponModel.countDocuments({ phone });
     let message = "Coupon not fount";
     if (totalRecords) {

@@ -126,7 +126,7 @@ module.exports.getCouponDetails = async (req, res) => {
   try {
     const { phone } = req.user;
 
-    const Coupon = await CouponModel.find({ phone: phone });
+    const Coupon = await CouponModel.find({ phone: phone }).sort({ updatedAt: -1 });
     return res.status(200).json({
       message: "Coupon",
       success: true,
