@@ -14,7 +14,11 @@ module.exports.login = async (req, res) => {
     const { phone } = req.body;
     let otp = Math.floor(1000 + Math.random() * 9000).toString();
 
-    if (process.env.ENVIRONMENT !== "production" || phone === "8538945025") {
+    if (
+      process.env.ENVIRONMENT === "production" ||
+      process.env.ENVIRONMENT === "development" ||
+      phone === "8538945025"
+    ) {
       otp = "1234";
     }
 
@@ -28,7 +32,8 @@ module.exports.login = async (req, res) => {
       return res.status(403).json({ message: "Invalid Phone", success: false });
     }
 
-    if (process.env.ENVIRONMENT === "production" && phone !== "8538945025") {
+    if (process.env.ENVIRONMENT !== "production" && process.env.ENVIRONMENT !== "development") {
+      // For testing purposes, we can log the
       const Apidata = {
         variables_values: `${updatedDocument.customer}|${otp}|`,
         numbers: updatedDocument.phone,
@@ -50,7 +55,7 @@ module.exports.login = async (req, res) => {
       phone,
     });
   } catch (err) {
-    console.log("login error", err)
+    console.log("login error", err);
     return res
       .status(500)
       .json({ message: "Internal Server Error", success: false });
@@ -150,7 +155,7 @@ module.exports.scratchCoupon = async (req, res) => {
       phone,
       customerId,
       "Scratch",
-      "Coupon Scratched", 
+      "Coupon Scratched",
       `Coupon Scratched Successfully (${Coupon.coupon_code})`
     );
     return res.status(200).json({
@@ -184,14 +189,13 @@ module.exports.redeemCoupon = async (req, res) => {
     // }
     // await uploadTimeline(
     //   phone,
-    //   customerId,      
+    //   customerId,
     //   "Coupon Reedemed",
     //   `Coupon Reedemed (${Coupon.coupon_code})`,
     // );
     return res.status(200).json({
       message: "Coupon Updated",
       success: true,
-     
     });
   } catch (err) {
     return res.status(500).json({
@@ -298,7 +302,9 @@ module.exports.getTimeline = async (req, res) => {
     const userId = req.user;
     const phone = req.user.phone;
 
-    const Timeline = await CustomerTimeline.find({ phone }).select("-__v").sort({ createdAt: -1 });
+    const Timeline = await CustomerTimeline.find({ phone })
+      .select("-__v")
+      .sort({ createdAt: -1 });
     return res.status(200).json({
       message: "Timeline",
       success: true,
