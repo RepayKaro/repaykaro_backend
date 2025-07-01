@@ -107,6 +107,7 @@ module.exports.validateCustomerListFilter = (req, res, next) => {
     phone: Joi.string().allow("").optional(), // Allow empty string
     customer: Joi.string().allow("").optional(), // Allow empty string
     lender: Joi.string().allow("").optional(), // Allow empty string
+    type: Joi.string().allow("").optional(),
   });
   const { error } = schema.validate(req.query);
   if (error) {

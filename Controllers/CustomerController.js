@@ -185,8 +185,9 @@ module.exports.customerList = async (req, res) => {
       filter,
       phone,
       page = 1,
+      type,
       perPage = 10,
-      lender
+      lender,
     } = req.query;
 
     const pageNumber = Math.max(1, parseInt(page));
@@ -195,12 +196,13 @@ module.exports.customerList = async (req, res) => {
     const skip = showAll ? 0 : (pageNumber - 1) * limit;
 
     const filterQuery = {
-      isActive: true,
+      ...(type === "current-customers" && { isActive: true }),
       ...(filter === "0" && { isPaid: false }),
       ...(filter === "1" && { isPaid: true }),
       ...(filter === "3" && { isLogin: true }),
       ...(phone && { phone })
     };
+
 
     const searchConditions = [];
     if (customer) {
@@ -236,25 +238,45 @@ module.exports.customerList = async (req, res) => {
     }
 
     // Join payments
-    basePipeline.push({
-      $lookup: {
-        from: "payments",
-        let: { customerId: "$_id" },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ["$customer_id", "$$customerId"] },
-                  { $eq: ["$isActive", true] }
-                ]
+    if (type === "current-customers") {
+      basePipeline.push({
+        $lookup: {
+          from: "payments",
+          let: { customerId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$customer_id", "$$customerId"] },
+                    { $eq: ["$isActive", true] }
+                  ]
+                }
               }
             }
-          }
-        ],
-        as: "payments"
-      }
-    });
+          ],
+          as: "payments"
+        }
+      });
+    } else if (type === "total-customers") {
+      basePipeline.push({
+        $lookup: {
+          from: "payments",
+          let: { customerId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$customer_id", "$$customerId"]
+                }
+              }
+            }
+          ],
+          as: "payments"
+        }
+      });
+    }
+
 
     // If filter === 1, include only customers with payments
     if (filter === "1") {
@@ -286,6 +308,9 @@ module.exports.customerList = async (req, res) => {
       }
     });
 
+    basePipeline.push({
+      $sort: { updatedAt: -1 }
+    });
     // Pagination
     if (!showAll) {
       basePipeline.push({ $skip: skip });
@@ -429,7 +454,7 @@ module.exports.testt = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message:"Test endpoint successful",
+      message: "Test endpoint successful",
     });
   } catch (err) {
     console.error("❌ Error in getCustomerDetailsByPhone:", err);
