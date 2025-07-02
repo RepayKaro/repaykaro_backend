@@ -31,6 +31,10 @@ router.get(
   checkPermission(ModuleNames.USER, TaskEnum.READ),
   UserController.getProfileById
 );
+router.post(
+  "/inquiry",
+  AuthController.inquiry
+);
 
 module.exports = router;
 //test
