@@ -221,17 +221,7 @@ const verificationMail = async (data) => {
     Thank you for your interest in <strong>RepayKaro</strong>. We're excited to have you onboard!
   </p>
 
-  <p style="margin-bottom: 16px;">
-    To complete your inquiry and secure your access, please verify your email address by clicking the button below:
-  </p>
 
-  <a href="${data.verificationUrl}" style="display: inline-block; padding: 12px 24px; background-color: #ff6f61; color: #fff; text-decoration: none; border-radius: 4px; font-weight: bold;">
-    Verify Email Now
-  </a>
-
-  <p style="margin-top: 16px;">
-    Please note: This verification link will expire in <strong>20 minutes</strong>.
-  </p>
 
   <!-- Responsive Table -->
   <div style="margin-top: 30px; overflow-x: auto;">

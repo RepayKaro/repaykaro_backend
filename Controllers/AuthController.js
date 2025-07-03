@@ -43,7 +43,7 @@ module.exports.inquiry = async (req, res) => {
         email: email,
         phone: phone,
         message:message,
-        verificationUrl: `${process.env.ORIGIN_LIVE}/verify-inquiry?token=${result._id}`,
+        // verificationUrl: `${process.env.ORIGIN_LIVE}/verify-inquiry?token=${result._id}`,
       };
 
       const verificationHtml = await verificationMail(data);
