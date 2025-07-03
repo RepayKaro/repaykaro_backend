@@ -2,10 +2,10 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const UserModel = require("../Models/User");
 const InquirySchema = require("../Models/Inquiry");
-const { verificationMail } = require("../Utils/mail-formate");
+const { inquiryMailFormateForClient, inquiryMailFormateForAdmin } = require("../Utils/mail-formate");
 module.exports.inquiry = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone,message } = req.body;
+    const { firstName, lastName, email, phone, message } = req.body;
     const inquiry = await InquirySchema.findOne({
       email,
       phone,
@@ -42,18 +42,28 @@ module.exports.inquiry = async (req, res) => {
         fullName: `${firstName} ${lastName}`,
         email: email,
         phone: phone,
-        message:message,
+        message: message,
         // verificationUrl: `${process.env.ORIGIN_LIVE}/verify-inquiry?token=${result._id}`,
       };
 
-      const verificationHtml = await verificationMail(data);
+      const clientHtml = await inquiryMailFormateForClient(data);
+      const recipients = ["hr@truebusinessminds.com", "kamal.sharma@truebusinessminds.com", "mohit.bhardwaj@truebusinessminds.com"];
       const mailOptions = {
         from: process.env.EMAIL_FROM,
         to: email,
+        // to: recipients.join(", "),
         subject: "Inquiry Confirmation",
-        html: verificationHtml,
+        html: clientHtml,
       };
       await transporter.sendMail(mailOptions);
+      const adminHtml = await inquiryMailFormateForAdmin(data);
+      const mailOptionsForAdmin = {
+        from: process.env.EMAIL_FROM,
+        to: recipients.join(", "),
+        subject: "New Inquiry",
+        html: adminHtml,
+      };
+      await transporter.sendMail(mailOptionsForAdmin);
     }
     return res.status(201).json({
       message: "Inquiry created successfully",

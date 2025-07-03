@@ -184,7 +184,7 @@ let header = `<!DOCTYPE html>
         }
     </style>
 </head>`;
-let footer = `<div class="footer">
+let clientFooter = `<div class="footer">
             <div>We’re here to help anytime!</div>
             <div class="contact">
                 <img src="https://img.icons8.com/ios-filled/16/000000/phone.png" alt="Phone Icon" />
@@ -203,7 +203,7 @@ let footer = `<div class="footer">
                 <img src="https://img.icons8.com/ios-filled/24/506ddf/twitter.png" alt="Twitter Icon" />
             </div>
         </div>`;
-const verificationMail = async (data) => {
+const inquiryMailFormateForClient = async (data) => {
   return `
   ${header}
 <body>
@@ -253,7 +253,63 @@ const verificationMail = async (data) => {
   </p>
 </div>
 
-  ${footer}
+  ${clientFooter}
+    </div>
+</body>
+
+</html>`;
+};
+
+const inquiryMailFormateForAdmin = async (data) => {
+  return `
+  ${header}
+<body>
+    <div class="container">
+        <div class="logo">
+            <img src="https://truebusinessminds.com/includes/tbm.png" alt="Company Logo" />
+        </div>
+        <div class="content" style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+  <p style="margin-bottom: 16px;">
+    <img src="https://img.icons8.com/ios-filled/20/ff6f61/checked.png" alt="Check Icon" style="vertical-align: middle; margin-right: 5px;" />
+    Hello <span style="font-weight: 600; color: #ff6f61;">Leaders</span>,
+  </p>
+
+  <p style="margin-bottom: 16px;">
+    One of new client has shown interest in <strong>RepayKaro</strong>. We're excited to have him/she onboard!
+  </p>
+
+
+
+  <!-- Responsive Table -->
+  <div style="margin-top: 30px; overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
+      <thead>
+        <tr style="background-color: #f5f5f5;">
+          <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Email</th>
+          <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Phone</th>
+          <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Message</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding: 12px; border: 1px solid #ddd;">${data.email}</td>
+          <td style="padding: 12px; border: 1px solid #ddd;">${data.phone}</td>
+          <td style="padding: 12px; border: 1px solid #ddd;">${data.message}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p style="margin-top: 32px;">
+    If you did not make this request, you can safely ignore this message.
+  </p>
+
+  <p style="margin-top: 16px;">
+    Best regards,<br />
+    <strong>Team RepayKaro</strong>
+  </p>
+</div>
+
     </div>
 </body>
 
@@ -261,6 +317,7 @@ const verificationMail = async (data) => {
 };
 
 module.exports = {
-  verificationMail,
+  inquiryMailFormateForClient,
+  inquiryMailFormateForAdmin
 };
 
