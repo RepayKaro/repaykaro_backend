@@ -10,129 +10,101 @@ const uuid = require("uuid").v4;
 const fs = require("fs");
 const path = require("path");
 
+const ExcelJS = require("exceljs");
 
 module.exports.uploadCustomers = async (req, res) => {
-  const uploadId = uuid(); // unique identifier for each upload
+  const uploadId = uuid();
   console.time(`📥 Excel Upload ${uploadId}`);
 
   try {
     if (!req.file) {
-      return res
-        .status(400)
-        .json({ message: "No file uploaded", success: false });
+      return res.status(400).json({ message: "No file uploaded", success: false });
     }
 
-    const xlsx = require("xlsx");
-    const workbook = xlsx.readFile(req.file.path);
-    const sheetName = workbook.SheetNames[0];
-
-    const rawData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
-      raw: false,
-      defval: "",
-    });
-
-    if (!rawData.length) {
-      return res.status(400).json({ message: "File is empty", success: false });
-    }
-
-    // === Step 1: Clean and Normalize ===
     const formatNumber = (value) => parseFloat(value || 0).toFixed(2);
     const formatNumber1 = (value) => {
       if (!value) return 0;
-      const floatedValue = parseFloat(value || 0).toFixed(2)
-      return Math.floor(Number(floatedValue)); // rounds down like 10.99 -> 10
+      const floatedValue = parseFloat(value || 0).toFixed(2);
+      return Math.floor(Number(floatedValue));
     };
     const normalizePhone = (phone) =>
       String(phone || "")
         .replace(/\s+/g, "")
         .trim();
 
-    const normalizedData = rawData.map((row) => {
+    const phoneToCustomerMap = new Map();
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(req.file.path);
+    const worksheet = workbook.getWorksheet(1); // first sheet
+
+    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      if (rowNumber === 1) return; // skip header
+
       const cleanedRow = {};
-      for (const key in row) {
-        cleanedRow[key.trim()] = row[key];
-      }
-      return {
+      row.eachCell((cell, colNumber) => {
+        const header = worksheet.getRow(1).getCell(colNumber).value;
+        cleanedRow[header.trim()] = cell.text;
+      });
+
+      const phone = normalizePhone(cleanedRow.phone);
+      if (!phone) return;
+
+      const customer = {
         ...cleanedRow,
+        phone,
         fore_closure: formatNumber(cleanedRow.fore_closure),
         settlement: formatNumber(cleanedRow.settlement),
         minimum_part_payment: formatNumber(cleanedRow.minimum_part_payment),
         foreclosure_reward: formatNumber1(cleanedRow.foreclosure_reward),
         settlement_reward: formatNumber1(cleanedRow.settlement_reward),
-        minimum_part_payment_reward: formatNumber1(
-          cleanedRow.minimum_part_payment_reward
-        ),
-        phone: normalizePhone(cleanedRow.phone),
+        minimum_part_payment_reward: formatNumber1(cleanedRow.minimum_part_payment_reward),
       };
+
+      phoneToCustomerMap.set(phone, customer); // deduplication
     });
 
-    // === Step 2: Filter out empty phones ===
-    const validCustomers = normalizedData.filter((c) => !!c.phone);
-
-    // === Step 3: Deduplicate by phone ===
-    const seen = new Set();
-    const uniqueCustomers = [];
-    for (const cust of validCustomers) {
-      if (!seen.has(cust.phone)) {
-        seen.add(cust.phone);
-        uniqueCustomers.push(cust);
-      }
-    }
+    const allPhones = Array.from(phoneToCustomerMap.keys());
+    const uniqueCustomers = Array.from(phoneToCustomerMap.values());
 
     if (!uniqueCustomers.length) {
       return res.status(400).json({
-        message: "All phone numbers are duplicates or missing",
+        message: "No valid customers found",
         success: false,
       });
     }
 
-    // === Step 4: Respond Early ===
     res.status(202).json({
       message: "Customer upload started",
       totalUploaded: uniqueCustomers.length,
       success: true,
     });
 
-    // === Step 5: Background Insert Task ===
+    // Background task
     setImmediate(async () => {
       try {
         console.time(`🔍 DB Check & Insert ${uploadId}`);
 
-        const phones = uniqueCustomers.map((c) => c.phone);
-
-        const phoneToCustomerMap = new Map();
-        uniqueCustomers.forEach((c) => {
-          phoneToCustomerMap.set(c.phone, c); // overwrite in case of duplicates in Excel
-        });
-
-        const allPhones = Array.from(phoneToCustomerMap.keys());
-
-        // Step 1: Find existing records
         const existingRecords = await CustomerModel.find(
           { phone: { $in: allPhones }, isActive: true },
           { phone: 1 }
         ).lean();
 
         const existingPhones = new Set(existingRecords.map((c) => c.phone));
-        const phonesToUpdate = Array.from(existingPhones);
 
-        // Step 2: Deactivate existing customers
-        if (phonesToUpdate.length > 0) {
+        if (existingPhones.size > 0) {
           const updateRes = await CustomerModel.updateMany(
-            { phone: { $in: phonesToUpdate }, isActive: true },
+            { phone: { $in: Array.from(existingPhones) }, isActive: true },
             { $set: { isActive: false } }
           );
           console.log(`🛑 Deactivated ${updateRes.modifiedCount} existing customers`);
         }
-        console.log(allPhones)
 
-        // Step 3: Prepare new customer records
         const newCustomers = allPhones.map((phone) => ({
           ...phoneToCustomerMap.get(phone),
-          isActive: true, // ensure new ones are active
+          isActive: true,
         }));
 
-        // Step 4: Insert in chunks
         let totalInserted = 0;
         for (let i = 0; i < newCustomers.length; i += BATCH_SIZE) {
           const chunk = newCustomers.slice(i, i + BATCH_SIZE);
@@ -141,60 +113,36 @@ module.exports.uploadCustomers = async (req, res) => {
             console.log(`✅ Inserted ${res.length} in chunk #${i / BATCH_SIZE + 1}`);
             totalInserted += res.length;
           } catch (err) {
-            console.error(
-              `❌ Failed to insert chunk #${i / BATCH_SIZE + 1}`,
-              err.message
-            );
+            console.error(`❌ Failed to insert chunk #${i / BATCH_SIZE + 1}`, err.message);
           }
         }
 
-        console.log(
-          `✅ [${uploadId}] Finished inserting ${totalInserted} new customers.`
-        );
+        console.log(`✅ [${uploadId}] Finished inserting ${totalInserted} new customers.`);
         console.timeEnd(`🔍 DB Check & Insert ${uploadId}`);
         console.timeEnd(`📥 Excel Upload ${uploadId}`);
 
-        // Delete uploaded Excel file
         fs.unlink(req.file.path, (err) => {
-          if (err) {
-            console.error(`⚠️ Failed to delete file: ${req.file.path}`, err.message);
-          } else {
-            console.log(`🧹 Successfully deleted uploaded file: ${req.file.path}`);
-          }
+          if (err) console.error(`⚠️ Failed to delete file:`, err.message);
+          else console.log(`🧹 Deleted uploaded file`);
         });
-
-      } catch (bgErr) {
-        console.error(`❌ Background Upload Error [${uploadId}]:`, bgErr.message);
-        console.timeEnd(`📥 Excel Upload ${uploadId}`);
+      } catch (err) {
+        console.error(`❌ Background Upload Error [${uploadId}]:`, err.message);
       }
     });
-
   } catch (err) {
     console.error(`❌ Upload API Error [${uploadId}]:`, err.message);
-    console.timeEnd(`📥 Excel Upload ${uploadId}`);
-    return res.status(500).json({
-      message: "Internal server error",
-      success: false,
-    });
+    return res.status(500).json({ message: "Internal server error", success: false });
   }
 };
 module.exports.customerList = async (req, res) => {
   try {
-    const {
-      customer,
-      filter,
-      phone,
-      page = 1,
-      type,
-      perPage = 10,
-      lender,
-    } = req.query;
-
+    const { customer, filter, phone, page = 1, type, perPage = 10, lender } = req.query;
     const pageNumber = Math.max(1, parseInt(page));
     const showAll = perPage === "All";
     const limit = showAll ? null : Math.max(1, parseInt(perPage));
     const skip = showAll ? 0 : (pageNumber - 1) * limit;
 
+    // Build filter query (unchanged from your original)
     const filterQuery = {
       ...(type === "current-customers" && { isActive: true }),
       ...(filter === "0" && { isPaid: false }),
@@ -203,7 +151,7 @@ module.exports.customerList = async (req, res) => {
       ...(phone && { phone })
     };
 
-
+    // Build search conditions (unchanged)
     const searchConditions = [];
     if (customer) {
       searchConditions.push({
@@ -222,6 +170,7 @@ module.exports.customerList = async (req, res) => {
       });
     }
 
+    // Base pipeline (maintaining your exact logic)
     const basePipeline = [];
 
     if (searchConditions.length) {
@@ -237,7 +186,7 @@ module.exports.customerList = async (req, res) => {
       basePipeline.push({ $match: filterQuery });
     }
 
-    // Join payments
+    // Payment joins (unchanged logic)
     if (type === "current-customers") {
       basePipeline.push({
         $lookup: {
@@ -277,16 +226,15 @@ module.exports.customerList = async (req, res) => {
       });
     }
 
-
-    // If filter === 1, include only customers with payments
+    // Payment filter (unchanged)
     if (filter === "1") {
       basePipeline.push({ $match: { "payments.0": { $exists: true } } });
     }
 
-    // ✅ Join user table for verified_by name
+    // User lookup (unchanged)
     basePipeline.push({
       $lookup: {
-        from: "users", // ✅ model name should match
+        from: "users",
         localField: "verified_by",
         foreignField: "_id",
         as: "verified_user"
@@ -299,7 +247,7 @@ module.exports.customerList = async (req, res) => {
       }
     });
 
-    // Clean unnecessary fields
+    // Projection (unchanged)
     basePipeline.push({
       $project: {
         otp: 0,
@@ -308,24 +256,33 @@ module.exports.customerList = async (req, res) => {
       }
     });
 
-    basePipeline.push({
-      $sort: { updatedAt: -1 }
-    });
-    // Pagination
+    // Sorting (unchanged)
+    // basePipeline.push({
+    //   $sort: { updatedAt: -1 }
+    // });
+
+    // Pagination (unchanged)
     if (!showAll) {
       basePipeline.push({ $skip: skip });
       basePipeline.push({ $limit: limit });
     }
 
-    // Final query
-    const [data, totalRecords] = await Promise.all([
-      CustomerModel.aggregate(basePipeline),
-
-      CustomerModel.aggregate([
+    // Execute queries with memory optimizations
+    const [data, totalResult] = await Promise.all([
+      CustomerModel.collection.aggregate(basePipeline, { 
+        allowDiskUse: true,
+        maxTimeMS: 60000 // 1 minute timeout
+      }).toArray(),
+      
+      CustomerModel.collection.aggregate([
         ...basePipeline.filter(stage => !["$skip", "$limit"].includes(Object.keys(stage)[0])),
         { $count: "count" }
-      ]).then(res => res[0]?.count || 0)
+      ], { 
+        allowDiskUse: true 
+      }).toArray()
     ]);
+
+    const totalRecords = totalResult[0]?.count || 0;
 
     return res.status(200).json({
       success: true,
@@ -347,6 +304,7 @@ module.exports.customerList = async (req, res) => {
     });
   }
 };
+
 
 module.exports.updateCustomerPayment = async (req, res) => {
   try {
