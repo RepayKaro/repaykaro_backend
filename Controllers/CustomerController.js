@@ -124,7 +124,6 @@ module.exports.uploadCustomers = async (req, res) => {
           );
           console.log(`🛑 Deactivated ${updateRes.modifiedCount} existing customers`);
         }
-        console.log(allPhones)
 
         // Step 3: Prepare new customer records
         const newCustomers = allPhones.map((phone) => ({
@@ -347,6 +346,7 @@ module.exports.customerList = async (req, res) => {
     });
   }
 };
+
 
 module.exports.updateCustomerPayment = async (req, res) => {
   try {
