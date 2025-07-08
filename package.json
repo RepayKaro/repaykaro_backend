@@ -4,16 +4,23 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "node index.js",
+    "worker": "node Workers/Worker.js",
+    "dev:start": "nodemon index.js",
+    "dev:worker": "nodemon Workers/Worker.js",
+    "dev": "concurrently \"npm run dev:start\" \"npm run dev:worker\"",
+    "prod": "concurrently \"npm run start\" \"npm run worker\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.817.0",
+    "amqplib": "^0.10.8",
     "axios": "^1.7.9",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.2",
+    "concurrently": "^9.2.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.0",
     "express": "^4.19.2",

@@ -2,14 +2,16 @@ const CustomerModel = require("../Models/Customer");
 const CouponModel = require("../Models/Coupon");
 const PaymentModel = require("../Models/Payment");
 const Joi = require("joi");
-const { getUserNameById, getUserNameByPhone } = require('../Utils/helper-function');
+const {
+  getUserNameById,
+  getUserNameByPhone,
+} = require("../Utils/helper-function");
 const { Buffer } = require("buffer");
 
 const BATCH_SIZE = 5000;
 const uuid = require("uuid").v4;
 const fs = require("fs");
 const path = require("path");
-
 
 module.exports.uploadCustomers = async (req, res) => {
   const uploadId = uuid(); // unique identifier for each upload
@@ -39,7 +41,7 @@ module.exports.uploadCustomers = async (req, res) => {
     const formatNumber = (value) => parseFloat(value || 0).toFixed(2);
     const formatNumber1 = (value) => {
       if (!value) return 0;
-      const floatedValue = parseFloat(value || 0).toFixed(2)
+      const floatedValue = parseFloat(value || 0).toFixed(2);
       return Math.floor(Number(floatedValue)); // rounds down like 10.99 -> 10
     };
     const normalizePhone = (phone) =>
@@ -122,7 +124,9 @@ module.exports.uploadCustomers = async (req, res) => {
             { phone: { $in: phonesToUpdate }, isActive: true },
             { $set: { isActive: false } }
           );
-          console.log(`🛑 Deactivated ${updateRes.modifiedCount} existing customers`);
+          console.log(
+            `🛑 Deactivated ${updateRes.modifiedCount} existing customers`
+          );
         }
 
         // Step 3: Prepare new customer records
@@ -136,8 +140,12 @@ module.exports.uploadCustomers = async (req, res) => {
         for (let i = 0; i < newCustomers.length; i += BATCH_SIZE) {
           const chunk = newCustomers.slice(i, i + BATCH_SIZE);
           try {
-            const res = await CustomerModel.insertMany(chunk, { ordered: false });
-            console.log(`✅ Inserted ${res.length} in chunk #${i / BATCH_SIZE + 1}`);
+            const res = await CustomerModel.insertMany(chunk, {
+              ordered: false,
+            });
+            console.log(
+              `✅ Inserted ${res.length} in chunk #${i / BATCH_SIZE + 1}`
+            );
             totalInserted += res.length;
           } catch (err) {
             console.error(
@@ -156,18 +164,24 @@ module.exports.uploadCustomers = async (req, res) => {
         // Delete uploaded Excel file
         fs.unlink(req.file.path, (err) => {
           if (err) {
-            console.error(`⚠️ Failed to delete file: ${req.file.path}`, err.message);
+            console.error(
+              `⚠️ Failed to delete file: ${req.file.path}`,
+              err.message
+            );
           } else {
-            console.log(`🧹 Successfully deleted uploaded file: ${req.file.path}`);
+            console.log(
+              `🧹 Successfully deleted uploaded file: ${req.file.path}`
+            );
           }
         });
-
       } catch (bgErr) {
-        console.error(`❌ Background Upload Error [${uploadId}]:`, bgErr.message);
+        console.error(
+          `❌ Background Upload Error [${uploadId}]:`,
+          bgErr.message
+        );
         console.timeEnd(`📥 Excel Upload ${uploadId}`);
       }
     });
-
   } catch (err) {
     console.error(`❌ Upload API Error [${uploadId}]:`, err.message);
     console.timeEnd(`📥 Excel Upload ${uploadId}`);
@@ -199,25 +213,24 @@ module.exports.customerList = async (req, res) => {
       ...(filter === "0" && { isPaid: false }),
       ...(filter === "1" && { isPaid: true }),
       ...(filter === "3" && { isLogin: true }),
-      ...(phone && { phone })
+      ...(phone && { phone }),
     };
-
 
     const searchConditions = [];
     if (customer) {
       searchConditions.push({
         text: {
           query: customer,
-          path: "customer"
-        }
+          path: "customer",
+        },
       });
     }
     if (lender) {
       searchConditions.push({
         text: {
           query: lender,
-          path: "lender_name"
-        }
+          path: "lender_name",
+        },
       });
     }
 
@@ -227,8 +240,8 @@ module.exports.customerList = async (req, res) => {
       basePipeline.push({
         $search: {
           index: "default",
-          compound: { must: searchConditions }
-        }
+          compound: { must: searchConditions },
+        },
       });
     }
 
@@ -248,14 +261,14 @@ module.exports.customerList = async (req, res) => {
                 $expr: {
                   $and: [
                     { $eq: ["$customer_id", "$$customerId"] },
-                    { $eq: ["$isActive", true] }
-                  ]
-                }
-              }
-            }
+                    { $eq: ["$isActive", true] },
+                  ],
+                },
+              },
+            },
           ],
-          as: "payments"
-        }
+          as: "payments",
+        },
       });
     } else if (type === "total-customers") {
       basePipeline.push({
@@ -266,16 +279,15 @@ module.exports.customerList = async (req, res) => {
             {
               $match: {
                 $expr: {
-                  $eq: ["$customer_id", "$$customerId"]
-                }
-              }
-            }
+                  $eq: ["$customer_id", "$$customerId"],
+                },
+              },
+            },
           ],
-          as: "payments"
-        }
+          as: "payments",
+        },
       });
     }
-
 
     // If filter === 1, include only customers with payments
     if (filter === "1") {
@@ -288,14 +300,14 @@ module.exports.customerList = async (req, res) => {
         from: "users", // ✅ model name should match
         localField: "verified_by",
         foreignField: "_id",
-        as: "verified_user"
-      }
+        as: "verified_user",
+      },
     });
 
     basePipeline.push({
       $addFields: {
-        verified_by: { $arrayElemAt: ["$verified_user.name", 0] }
-      }
+        verified_by: { $arrayElemAt: ["$verified_user.name", 0] },
+      },
     });
 
     // Clean unnecessary fields
@@ -303,12 +315,12 @@ module.exports.customerList = async (req, res) => {
       $project: {
         otp: 0,
         __v: 0,
-        verified_user: 0
-      }
+        verified_user: 0,
+      },
     });
 
     basePipeline.push({
-      $sort: { updatedAt: -1 }
+      $sort: { updatedAt: -1 },
     });
     // Pagination
     if (!showAll) {
@@ -321,9 +333,11 @@ module.exports.customerList = async (req, res) => {
       CustomerModel.aggregate(basePipeline),
 
       CustomerModel.aggregate([
-        ...basePipeline.filter(stage => !["$skip", "$limit"].includes(Object.keys(stage)[0])),
-        { $count: "count" }
-      ]).then(res => res[0]?.count || 0)
+        ...basePipeline.filter(
+          (stage) => !["$skip", "$limit"].includes(Object.keys(stage)[0])
+        ),
+        { $count: "count" },
+      ]).then((res) => res[0]?.count || 0),
     ]);
 
     return res.status(200).json({
@@ -334,19 +348,17 @@ module.exports.customerList = async (req, res) => {
       data,
       message: data.length
         ? "Customers retrieved successfully"
-        : "No customers found"
+        : "No customers found",
     });
-
   } catch (error) {
     console.error("Customer list error:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
-      ...(process.env.NODE_ENV === "development" && { error: error.message })
+      ...(process.env.NODE_ENV === "development" && { error: error.message }),
     });
   }
 };
-
 
 module.exports.updateCustomerPayment = async (req, res) => {
   try {
@@ -449,8 +461,6 @@ module.exports.getCustomerDetails = async (req, res) => {
 module.exports.testt = async (req, res) => {
   try {
     console.log("Test endpoint hit");
-
-
 
     return res.status(200).json({
       success: true,

@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const UserModel = require("../Models/User");
 const InquirySchema = require("../Models/Inquiry");
 const { inquiryMailFormateForClient, inquiryMailFormateForAdmin } = require("../Utils/mail-formate");
+const { sendToQueue } = require("../Workers/sendToQueue");
 module.exports.inquiry = async (req, res) => {
   try {
     const { firstName, lastName, email, phone, message } = req.body;
@@ -25,18 +26,20 @@ module.exports.inquiry = async (req, res) => {
       message
     });
     const result = await inquiryModel.save();
+
+
     if (result?._id) {
       //send email
-      const nodemailer = require("nodemailer");
-      const transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST, // smtpout.secureserver.net
-        port: Number(process.env.EMAIL_PORT), // 465
-        secure: true, // true for port 465
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
+      // const nodemailer = require("nodemailer");
+      // const transporter = nodemailer.createTransport({
+      //   host: process.env.EMAIL_HOST, // smtpout.secureserver.net
+      //   port: Number(process.env.EMAIL_PORT), // 465
+      //   secure: true, // true for port 465
+      //   auth: {
+      //     user: process.env.EMAIL_USER,
+      //     pass: process.env.EMAIL_PASS,
+      //   },
+      // });
 
       const data = {
         fullName: `${firstName} ${lastName}`,
@@ -47,23 +50,21 @@ module.exports.inquiry = async (req, res) => {
       };
 
       const clientHtml = await inquiryMailFormateForClient(data);
-      const recipients = ["hr@truebusinessminds.com", "kamal.sharma@truebusinessminds.com", "mohit.bhardwaj@truebusinessminds.com"];
-      const mailOptions = {
-        from: process.env.EMAIL_FROM,
+      await sendToQueue("emailQueue", {
         to: email,
-        // to: recipients.join(", "),
         subject: "Inquiry Confirmation",
         html: clientHtml,
-      };
-      await transporter.sendMail(mailOptions);
+      });
+
       const adminHtml = await inquiryMailFormateForAdmin(data);
-      const mailOptionsForAdmin = {
-        from: process.env.EMAIL_FROM,
+      const recipients = ["hr@truebusinessminds.com", "finance@truebusinessminds.com"];
+
+
+      await sendToQueue("emailQueue", {
         to: recipients.join(", "),
         subject: "New Inquiry",
         html: adminHtml,
-      };
-      await transporter.sendMail(mailOptionsForAdmin);
+      });
     }
     return res.status(201).json({
       message: "Inquiry created successfully",
